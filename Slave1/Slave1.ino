@@ -23,6 +23,10 @@ Button2 btn1(BUTTON_1);
 Button2 btn2(BUTTON_2);
 
 long baud = 9600;
+char buff[512];
+int vref = 1100;
+int btnCick = false;
+
 
 HardwareSerial HC12(2);
 Adafruit_MPU6050 mpu;
