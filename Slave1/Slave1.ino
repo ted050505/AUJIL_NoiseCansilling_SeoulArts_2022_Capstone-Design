@@ -27,7 +27,6 @@ char buff[512];
 int vref = 1100;
 int btnCick = false;
 
-
 HardwareSerial HC12(2);
 Adafruit_MPU6050 mpu;
 
@@ -193,7 +192,7 @@ void loop() {
         showVoltage();
     }
     button_loop();
-  
+    
   if(digitalRead(SWITCH1) == HIGH) { 
     mpu.enableSleep(true);
     Serial.println("SWITCH OFF"); 
