@@ -15,16 +15,16 @@
 
 #define RESTRICT_PITCH // Comment out to restrict roll to ±90deg instead - please read: http://www.freescale.com/files/sensors/doc/app_note/AN3461.pdf
 
-Kalman kalmanX; // Create the Kalman instances
+Kalman kalmanX; // 칼만 객체 생성. 
 Kalman kalmanY;
 
 // 디스플레이를 통해 전압확인과 동작을 위한 핀 선언
-#define ADC_EN              14  //ADC_EN is the ADC detection enable port
+#define ADC_EN              14 
 #define ADC_PIN             34
 #define BUTTON_1            35
 #define BUTTON_2            0
 
-TFT_eSPI tft = TFT_eSPI(135, 240); // Invoke custom library
+TFT_eSPI tft = TFT_eSPI(135, 240);
 Button2 btn1(BUTTON_1);
 Button2 btn2(BUTTON_2);
 
@@ -32,9 +32,9 @@ double accX, accY, accZ;
 double gyroX, gyroY, gyroZ;
 int16_t tempRaw;
 
-double gyroXangle, gyroYangle; // Angle calculate using the gyro only
-double compAngleX, compAngleY; // Calculated angle using a complementary filter
-double kalAngleX, kalAngleY; // Calculated angle using a Kalman filter
+double gyroXangle, gyroYangle;
+double compAngleX, compAngleY; // 상보필터 적용 변수 선언
+double kalAngleX, kalAngleY; // 칼만필터 적용 변수 선언
 
 uint32_t timer;
 uint8_t i2cData[14]; // Buffer for I2C data
@@ -267,9 +267,6 @@ void serialPrintDataKalmanFilter(void) {
   double dt = (double)(micros() - timer) / 1000000; // Calculate delta time
   timer = micros();
 
-  // Source: http://www.freescale.com/files/sensors/doc/app_note/AN3461.pdf eq. 25 and eq. 26
-  // atan2 outputs the value of -π to π (radians) - see http://en.wikipedia.org/wiki/Atan2
-  // It is then converted from radians to degrees
 #ifdef RESTRICT_PITCH // Eq. 25 and 26
   double roll  = atan2(accY, accZ) * RAD_TO_DEG;
   double pitch = atan(-accX / sqrt(accY * accY + accZ * accZ)) * RAD_TO_DEG;
