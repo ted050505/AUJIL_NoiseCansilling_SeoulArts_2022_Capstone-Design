@@ -128,7 +128,7 @@ void setup() {
 
   tft.setSwapBytes(true);
   tft.pushImage(0, 0,  240, 135, ttgo);
-  espDelay(5000);
+  espDelay(1000);
 
   button_init();
   
