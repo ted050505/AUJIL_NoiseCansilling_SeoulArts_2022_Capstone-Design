@@ -215,31 +215,26 @@ void loop() {
 
 void sender(void) {
   Serial.print("Sender01 : ");
+//  HC12.print("Sender01 : ");
 }
 
 void printAvailableData(void) {
   mpu.getEvent(&a, &g, &temp);
 
-  acceleration_x = a.acceleration.x;
-  acceleration_y = a.acceleration.y;
-  acceleration_z = a.acceleration.z;
-  gyro_x = g.gyro.x;
-  gyro_y = g.gyro.y;
-  gyro_z = g.gyro.z;
-  HC12.print("Acceleration X: ");
-  HC12.print(acceleration_x);
-  HC12.print(", Y: ");
-  HC12.print(acceleration_y);
-  HC12.print(", Z: ");
-  HC12.print(acceleration_z);
+  HC12.print("Acc: ");
+  HC12.print(a.acceleration.x);
+  HC12.print(", ");
+  HC12.print(a.acceleration.y);
+  HC12.print(", ");
+  HC12.print(a.acceleration.z);
   HC12.println(" m/s^2");
 
-  HC12.print("Rotation X: ");
-  HC12.print(gyro_x);
-  HC12.print(", Y: ");
-  HC12.print(gyro_y);
-  HC12.print(", Z: ");
-  HC12.print(gyro_z);
+  HC12.print("Rot: ");
+  HC12.print(g.gyro.x);
+  HC12.print(", ");
+  HC12.print(g.gyro.y);
+  HC12.print(", ");
+  HC12.print(g.gyro.z);
   HC12.println(" rad/s");
 
   HC12.print("");
