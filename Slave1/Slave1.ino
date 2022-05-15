@@ -186,7 +186,7 @@ void loop() {
     
   if(digitalRead(SWITCH1) == HIGH) { 
     mpu.enableSleep(true);
-    Serial.println("SWITCH OFF"); 
+//    Serial.println("SWITCH OFF"); 
   }else{
     mpu.enableSleep(false);
     sender();
