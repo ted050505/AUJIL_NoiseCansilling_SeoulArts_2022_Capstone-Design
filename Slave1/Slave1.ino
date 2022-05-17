@@ -1,9 +1,9 @@
 #include "src/HardwareSerial.h"
-#include <Adafruit_MPU6050.h>
+#include "src/Adafruit_MPU6050.h"
 #include <Adafruit_Sensor.h>
-#include <Wire.h>
+#include "src/Wire.h"
 #include "Kalman.h"
-#include <TFT_eSPI.h>
+#include "src/TFT_eSPI.h"
 #include <SPI.h>
 #include "Button2.h"
 #include "esp_adc_cal.h"
