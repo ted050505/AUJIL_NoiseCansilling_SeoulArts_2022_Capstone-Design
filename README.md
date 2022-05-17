@@ -19,7 +19,7 @@
         
         사용 예정 : STm****icroelectronics VL53L0X Time-of-Flight Ranging 센서****
         
-        ![151641381.png](#%20Tech_HardWare%20166bf35693644005aaa84d88326efe54/151641381.png)
+        ![151641381.png](AUJIL_NoiseCansilling_SeoulArts_2022_Capstone-Design/#%20Tech_HardWare%20166bf35693644005aaa84d88326efe54/151641381.png)
         
         - Fully integrated miniature module
             - 940nm laser VCSEL ( Vertical Cavity Surface Emitting Laser )
