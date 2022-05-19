@@ -1,9 +1,9 @@
-#include "src/HardwareSerial.h"
-#include "src/Adafruit_MPU6050.h"
+#include <HardwareSerial.h>
+#include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
 #include "src/Wire.h"
 #include "Kalman.h"
-#include "src/TFT_eSPI.h"
+#include <TFT_eSPI.h>
 #include <SPI.h>
 #include "Button2.h"
 #include "esp_adc_cal.h"
@@ -13,7 +13,7 @@
 #define txPin 26
 #define SWITCH1 32
 
-#define RESTRICT_PITCH // Comment out to restrict roll to ±90deg instead - please read: http://www.freescale.com/files/sensors/doc/app_note/AN3461.pdf
+#define RESTRICT_PITCH 
 
 Kalman kalmanX; // 칼만 객체 생성. 
 Kalman kalmanY;
@@ -148,7 +148,7 @@ void setup() {
 
   while (i2cRead(0x75, i2cData, 1));
   if (i2cData[0] != 0x68) { // Read "WHO_AM_I" register
-    Serial.print(F("Error reading sensor"));
+//    Serial.print(F("Error reading sensor"));
     while (1);
   }
 
@@ -205,7 +205,7 @@ void loop() {
 }
 
 void sender(void) {
-  Serial.print("Sender01 : ");
+  Serial.print("ch01 : ");
 //  HC12.print("Sender01 : ");
 }
 
@@ -333,17 +333,19 @@ void serialPrintDataKalmanFilter(void) {
   Serial.print("\t");
 #endif
 
-  Serial.print(roll); Serial.print("\t");
-  Serial.print(gyroXangle); Serial.print("\t");
-  Serial.print(compAngleX); Serial.print("\t");
-  Serial.print(kalAngleX); Serial.print("\t");
-
+  Serial.print(roll); 
   Serial.print("\t");
+//  Serial.print(gyroXangle); Serial.print("\t");
+//  Serial.print(compAngleX); Serial.print("\t");
+//  Serial.print(kalAngleX); Serial.print("\t");
 
-  Serial.print(pitch); Serial.print("\t");
-  Serial.print(gyroYangle); Serial.print("\t");
-  Serial.print(compAngleY); Serial.print("\t");
-  Serial.print(kalAngleY); Serial.print("\t");
+//  Serial.print("\t");
+
+  Serial.print(pitch); 
+  Serial.print("\t");
+//  Serial.print(gyroYangle); Serial.print("\t");
+//  Serial.print(compAngleY); Serial.print("\t");
+//  Serial.print(kalAngleY); Serial.print("\t");
 
 #if 0 // Set to 1 to print the temperature
   Serial.print("\t");
