@@ -28,6 +28,15 @@ TFT_eSPI tft = TFT_eSPI(135, 240);
 Button2 btn1(BUTTON_1);
 Button2 btn2(BUTTON_2);
 
+//#define BLACK    0x0000
+//#define BLUE     0x001F
+//#define RED      0xF800
+//#define GREEN    0x07E0
+//#define CYAN     0x07FF
+//#define MAGENTA  0xF81F
+//#define YELLOW   0xFFE0 
+//#define WHITE    0xFFFF
+
 double accX, accY, accZ;
 double gyroX, gyroY, gyroZ;
 int16_t tempRaw;
@@ -203,23 +212,15 @@ void loop() {
     
   if(digitalRead(SWITCH1) == HIGH) { 
     mpu.enableSleep(true);
-//    Serial.println("SWITCH OFF"); 
   }else{
     mpu.enableSleep(false);
 //    sender();
 //    printAvailableData();
 //    serialPrintAvailableData();
-//    hc12PrintDataKalmanFilter();
-    serialPrintDataKalmanFilter();
+    hc12PrintDataKalmanFilter();
+//    serialPrintDataKalmanFilter();
     delay(1000);
   }
-  
-//  while (HC12.available()) {        // HC-12에 수신 데이터가 존재하는 경우
-//    Serial.write(HC12.read());      // HC-12 모듈의 출력 내용을 읽어 시리얼 모니터로 전송
-//  }
-//  while (Serial.available()) {      // 시리얼 모니터의 입력 내용이 존재하면
-//    HC12.write(Serial.read());      // 읽어서 HC-12 모듈로 전송
-//  }
 }
 
 void sender(void) {
