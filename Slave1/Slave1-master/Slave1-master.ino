@@ -213,7 +213,7 @@ void loop() {
     mpu.enableSleep(true);
   }else{
     mpu.enableSleep(false);
-//    sender();
+    sender();
 //    printAvailableData();
 //    serialPrintAvailableData();
     hc12PrintDataKalmanFilter();
