@@ -205,7 +205,7 @@ void loop() {
 }
 
 void sender(void) {
-  Serial.print("Sender01 : ");
+  Serial.print("ch01 : ");
 //  HC12.print("Sender01 : ");
 }
 
@@ -339,9 +339,10 @@ void serialPrintDataKalmanFilter(void) {
 //  Serial.print(compAngleX); Serial.print("\t");
 //  Serial.print(kalAngleX); Serial.print("\t");
 
-  Serial.print("\t");
+//  Serial.print("\t");
+    Serial.print("  ");
 
-  Serial.print(pitch); 
+  Serial.print(pitch);
 //  Serial.print("\t");
 //  Serial.print(gyroYangle); Serial.print("\t");
 //  Serial.print(compAngleY); Serial.print("\t");
