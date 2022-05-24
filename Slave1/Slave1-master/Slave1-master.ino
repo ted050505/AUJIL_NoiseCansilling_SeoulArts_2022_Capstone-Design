@@ -101,7 +101,6 @@ void showSensorValue()
 void button_init()
 {
     btn1.setPressedHandler([](Button2 & b) {
-        Serial.println("Detect Voltage..");
         btnCick = true;
     });
     btn2.setPressedHandler([](Button2 & b) {
