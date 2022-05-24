@@ -36,6 +36,9 @@ double gyroXangle, gyroYangle;
 double compAngleX, compAngleY; // 상보필터 적용 변수 선언
 double kalAngleX, kalAngleY; // 칼만필터 적용 변수 선언
 
+double roll;
+double pitch;
+
 uint32_t timer;
 uint8_t i2cData[14]; // Buffer for I2C data
 
@@ -66,10 +69,23 @@ void showVoltage()
         uint16_t v = analogRead(ADC_PIN);
         float battery_voltage = ((float)v / 4095.0) * 2.0 * 3.3 * (vref / 1000.0);
         String voltage = "Voltage :" + String(battery_voltage) + "V";
-        Serial.println(voltage);
+//        Serial.println(voltage);
         tft.fillScreen(TFT_BLACK);
         tft.setTextDatum(MC_DATUM);
-        tft.drawString(voltage,  tft.width() / 2, tft.height() / 2 );
+        tft.drawString(voltage,  tft.width() / 2, tft.height() / 3 );
+    }
+}
+
+void showSensorValue()
+{
+    static uint64_t timeStamp = 0;
+    if (millis() - timeStamp > 1000) {
+        timeStamp = millis();
+//        Serial.println(String(roll));
+        String sensorValue_roll = "Roll Value : " + String(roll);
+        String sensorValue_pitch = "Pitch Value : " + String(pitch);
+        tft.drawString(sensorValue_roll,  tft.width() / 2, tft.height() / 2 );
+        tft.drawString(sensorValue_pitch,  tft.width() / 2, tft.height() / 1.5 );
     }
 }
 
@@ -94,7 +110,7 @@ void button_init()
         //After using light sleep, you need to disable timer wake, because here use external IO port to wake up
         esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER);
         // esp_sleep_enable_ext1_wakeup(GPIO_SEL_35, ESP_EXT1_WAKEUP_ALL_LOW);
-        esp_sleep_enable_ext0_wakeup(GPIO_NUM_35, 0);
+        esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, 0);
         delay(200);
         esp_deep_sleep_start();
     });
@@ -181,6 +197,7 @@ void setup() {
 void loop() {
   if (btnCick) {
         showVoltage();
+        showSensorValue();
     }
     button_loop();
     
@@ -189,11 +206,11 @@ void loop() {
 //    Serial.println("SWITCH OFF"); 
   }else{
     mpu.enableSleep(false);
-    sender();
+//    sender();
 //    printAvailableData();
 //    serialPrintAvailableData();
-    hc12PrintDataKalmanFilter();
-//    serialPrintDataKalmanFilter();
+//    hc12PrintDataKalmanFilter();
+    serialPrintDataKalmanFilter();
     delay(1000);
   }
   
@@ -374,11 +391,11 @@ void hc12PrintDataKalmanFilter(void) {
   timer = micros();
 
 #ifdef RESTRICT_PITCH // Eq. 25 and 26
-  double roll  = atan2(accY, accZ) * RAD_TO_DEG;
-  double pitch = atan(-accX / sqrt(accY * accY + accZ * accZ)) * RAD_TO_DEG;
+  roll  = atan2(accY, accZ) * RAD_TO_DEG;
+  pitch = atan(-accX / sqrt(accY * accY + accZ * accZ)) * RAD_TO_DEG;
 #else // Eq. 28 and 29
-  double roll  = atan(accY / sqrt(accX * accX + accZ * accZ)) * RAD_TO_DEG;
-  double pitch = atan2(-accX, accZ) * RAD_TO_DEG;
+  roll  = atan(accY / sqrt(accX * accX + accZ * accZ)) * RAD_TO_DEG;
+  pitch = atan2(-accX, accZ) * RAD_TO_DEG;
 #endif
 
   double gyroXrate = gyroX / 131.0; // Convert to deg/s
