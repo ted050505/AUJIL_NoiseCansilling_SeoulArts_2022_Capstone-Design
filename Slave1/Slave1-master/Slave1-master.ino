@@ -7,7 +7,8 @@
 #include <SPI.h>
 #include "Button2.h"
 #include "esp_adc_cal.h"
-#include "bmp.h"
+//#include "bmp.h"
+#include "bmp_NoiseCancelling_LOGO.h"
 
 #define rxPin 25
 #define txPin 26
@@ -213,17 +214,17 @@ void loop() {
     mpu.enableSleep(true);
   }else{
     mpu.enableSleep(false);
-//    sender();
+    sender();
 //    printAvailableData();
 //    serialPrintAvailableData();
     hc12PrintDataKalmanFilter();
-//    serialPrintDataKalmanFilter();
+    serialPrintDataKalmanFilter();
     delay(1000);
   }
 }
 
 void sender(void) {
-//  Serial.print("ch01 : ");
+  Serial.print("ch01 : ");
   HC12.print("ch01 : ");
 }
 
