@@ -36,7 +36,7 @@ Kalman kalmanY;
 #define ICON_POS_X (tft.width() - ICON_WIDTH)
 
 // ADC 전압 값
-#define MIN_USB_VOL 4.9   // 최소 usb 
+#define MIN_USB_VOL 4.9   // 최소 usb전압 값, USB 연결 확인을 위함.
 #define ADC_PIN 34  
 #define CONV_FACTOR 1.8   // 계수
 #define READS 20          // 정확한 판독을 위해 20회 반복
@@ -127,7 +127,7 @@ void button_init()
         btnCick = false;
         int r = digitalRead(TFT_BL);
         tft.fillScreen(TFT_BLACK);
-        tft.setTextColor(TFT_GREEN, TFT_BLACK);
+        tft.setTextColor(TFT_WHITE,TFT_BLACK);
         tft.setTextDatum(MC_DATUM);
         tft.drawString("Press again to wake up",  tft.width() / 2, tft.height() / 2 );
         espDelay(6000);
@@ -163,20 +163,6 @@ void setup() {
 
   pinoutInit();
   displayInit();
-
-  tft.init();
-  tft.setRotation(1);
-  tft.fillScreen(TFT_BLACK);
-  tft.setTextSize(2);
-  tft.setTextColor(TFT_CYAN);
-  tft.setCursor(0, 0);
-  tft.setTextDatum(MC_DATUM);
-  tft.setTextSize(1);
-
-  tft.setSwapBytes(true);
-  tft.pushImage(0, 0,  240, 135, ttgo);
-  espDelay(1000);
-
   button_init();
   
   Wire.begin();
@@ -227,11 +213,12 @@ void setup() {
  
 void loop() {
   if (btnCick) {
-//        showVoltage();
-        xTaskCreate(battery_info, "battery_info", 2048, NULL, 1, NULL);
-//        showSensorValue();
-    }
+      showVoltage();
+//      showSensorValue();
+//    xTaskCreate(battery_info, "battery_info", 2048, NULL, 1, NULL);
+  }
     button_loop();
+    Serial.println(btnCick);
     
   if(digitalRead(SWITCH1) == HIGH) { 
     mpu.enableSleep(true);
@@ -242,7 +229,7 @@ void loop() {
 //    serialPrintAvailableData();
     hc12PrintDataKalmanFilter();
     serialPrintDataKalmanFilter();
-    delay(1000);
+    delay(500);
   }
 }
 
@@ -253,6 +240,7 @@ void pinoutInit(){    // 전압을 측정하기 위해 켜놓는 것. 소비전�
 
 void displayInit(){   // 디스플레이 초기화
   tft.begin();
+  tft.init();
   tft.setRotation(1);
   tft.setTextColor(TFT_WHITE,TFT_BLACK); 
   tft.fillScreen(TFT_BLACK);
@@ -260,6 +248,10 @@ void displayInit(){   // 디스플레이 초기화
   tft.setTextFont(2);
   TJpgDec.setJpgScale(1);
   TJpgDec.setCallback(tft_output);
+
+  tft.setSwapBytes(true);
+  tft.pushImage(0, 0,  240, 135, ttgo);
+  espDelay(1000);
 }
 
 void battery_info(void *arg)
