@@ -255,9 +255,9 @@ void displayInit(){   // 디스플레이 초기화
   tft.init();
   tft.setRotation(1);
   tft.setTextColor(TFT_WHITE,TFT_BLACK); 
-  tft.fillScreen(TFT_BLACK);
+//  tft.fillScreen(TFT_BLACK);
   tft.setSwapBytes(true);
-  tft.setTextFont(2);
+  tft.setTextFont(2.5);
   TJpgDec.setJpgScale(1);
   TJpgDec.setCallback(tft_output);
 
