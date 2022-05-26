@@ -113,8 +113,10 @@ void showSensorValue()
 //        Serial.println(String(roll));
         String sensorValue_roll = "Roll Value : " + String(roll);
         String sensorValue_pitch = "Pitch Value : " + String(pitch);
-        tft.drawString(sensorValue_roll,  tft.width() / 2, tft.height() / 2 );
-        tft.drawString(sensorValue_pitch,  tft.width() / 2, tft.height() / 1.5 );
+//        tft.drawString(sensorValue_roll,  tft.width() / 2, tft.height() / 2 );
+//        tft.drawString(sensorValue_pitch,  tft.width() / 2, tft.height() / 1.5 );
+        tft.println(sensorValue_roll);
+        tft.println(sensorValue_pitch);
     }
 }
 
@@ -122,6 +124,8 @@ void button_init()
 {
     btn1.setPressedHandler([](Button2 & b) {
         btnCick = true;
+        tft.fillScreen(TFT_BLACK);
+        xTaskCreate(battery_info, "battery_info", 2048, NULL, 1, NULL);
     });
     btn2.setPressedHandler([](Button2 & b) {
         btnCick = false;
@@ -162,6 +166,7 @@ void setup() {
 //  digitalWrite(ADC_EN, HIGH);
 
   pinoutInit();
+  SPIFFSInit();
   displayInit();
   button_init();
   
@@ -213,12 +218,10 @@ void setup() {
  
 void loop() {
   if (btnCick) {
-      showVoltage();
-//      showSensorValue();
-//    xTaskCreate(battery_info, "battery_info", 2048, NULL, 1, NULL);
+//    showVoltage();
+//    showSensorValue();
   }
     button_loop();
-    Serial.println(btnCick);
     
   if(digitalRead(SWITCH1) == HIGH) { 
     mpu.enableSleep(true);
@@ -236,6 +239,15 @@ void loop() {
 void pinoutInit(){    // 전압을 측정하기 위해 켜놓는 것. 소비전력이 많으면 LOW.
   pinMode(14, OUTPUT);
   digitalWrite(14, HIGH);
+}
+
+
+void SPIFFSInit(){
+  if (!SPIFFS.begin()) {
+    Serial.println("SPIFFS initialisation failed!");
+    while (1) yield(); // Stay here twiddling thumbs waiting
+  }
+  Serial.println("\r\nInitialisation done.");
 }
 
 void displayInit(){   // 디스플레이 초기화
@@ -259,12 +271,16 @@ void battery_info(void *arg)
   while (1) {
     tft.setCursor (0, STATUS_HEIGHT_BAR);
     tft.println("");
-    tft.print("Average value from pin: ");
-    tft.println(BL.pinRead());
+//    tft.print("Average value from pin: ");
+//    tft.println(BL.pinRead());
     tft.print("Volts: ");
     tft.println(BL.getBatteryVolts());
     tft.print("Charge level: ");
     tft.println(BL.getBatteryChargeLevel());
+    String sensorValue_roll = "Roll Value : " + String(roll);
+    String sensorValue_pitch = "Pitch Value : " + String(pitch);
+    tft.println(sensorValue_roll);
+    tft.println(sensorValue_pitch);
     
     if(BL.getBatteryVolts() >= MIN_USB_VOL){
       for(int i=0; i< ARRAY_SIZE(batteryImages); i++){
@@ -287,10 +303,10 @@ void battery_info(void *arg)
     
         drawingBatteryIcon(batteryImages[imgNum]);    
         drawingText(String(batteryLevel) + "%");
-        vTaskDelay(1000);
+        vTaskDelay(500);
     }
-      tft.print("Never Used Stack Size: ");
-      tft.println(uxTaskGetStackHighWaterMark(NULL));
+//      tft.print("Never Used Stack Size: ");
+//      tft.println(uxTaskGetStackHighWaterMark(NULL));
     }  
 }
 
