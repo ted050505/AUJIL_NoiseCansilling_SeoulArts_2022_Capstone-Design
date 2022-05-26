@@ -3,7 +3,10 @@
 #include <Adafruit_Sensor.h>
 #include "src/Wire.h"
 #include "Kalman.h"
+#include "src/Pangodream_18650_CL.h"
+#include "SPIFFS.h" 
 #include <TFT_eSPI.h>
+#include <TJpg_Decoder.h>
 #include <SPI.h>
 #include "Button2.h"
 #include "esp_adc_cal.h"
@@ -24,6 +27,22 @@ Kalman kalmanY;
 #define ADC_PIN             34
 #define BUTTON_1            35
 #define BUTTON_2            0
+
+// 배터리 아이콘 크기의 정의
+#define ICON_WIDTH 70
+#define ICON_HEIGHT 36
+#define STATUS_HEIGHT_BAR ICON_HEIGHT
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
+#define ICON_POS_X (tft.width() - ICON_WIDTH)
+
+// ADC 전압 값
+#define MIN_USB_VOL 4.9   // 최소 usb 
+#define ADC_PIN 34  
+#define CONV_FACTOR 1.8   // 계수
+#define READS 20          // 정확한 판독을 위해 20회 반복
+
+Pangodream_18650_CL BL(ADC_PIN, CONV_FACTOR, READS);
+char *batteryImages[] = {"/battery_01.jpg", "/battery_02.jpg", "/battery_03.jpg", "/battery_04.jpg", "/battery_05.jpg"};
 
 TFT_eSPI tft = TFT_eSPI(135, 240);
 Button2 btn1(BUTTON_1);
@@ -139,8 +158,11 @@ void setup() {
   Serial.begin(baud); 
   HC12.begin(baud, SERIAL_8N1, rxPin, txPin);             // 시리얼 모니터 속도 정의
 
-  pinMode(ADC_EN, OUTPUT);
-  digitalWrite(ADC_EN, HIGH);
+//  pinMode(ADC_EN, OUTPUT);
+//  digitalWrite(ADC_EN, HIGH);
+
+  pinoutInit();
+  displayInit();
 
   tft.init();
   tft.setRotation(1);
@@ -205,8 +227,9 @@ void setup() {
  
 void loop() {
   if (btnCick) {
-        showVoltage();
-        showSensorValue();
+//        showVoltage();
+        xTaskCreate(battery_info, "battery_info", 2048, NULL, 1, NULL);
+//        showSensorValue();
     }
     button_loop();
     
@@ -221,6 +244,79 @@ void loop() {
     serialPrintDataKalmanFilter();
     delay(1000);
   }
+}
+
+void pinoutInit(){    // 전압을 측정하기 위해 켜놓는 것. 소비전력이 많으면 LOW.
+  pinMode(14, OUTPUT);
+  digitalWrite(14, HIGH);
+}
+
+void displayInit(){   // 디스플레이 초기화
+  tft.begin();
+  tft.setRotation(1);
+  tft.setTextColor(TFT_WHITE,TFT_BLACK); 
+  tft.fillScreen(TFT_BLACK);
+  tft.setSwapBytes(true);
+  tft.setTextFont(2);
+  TJpgDec.setJpgScale(1);
+  TJpgDec.setCallback(tft_output);
+}
+
+void battery_info(void *arg)
+{
+  while (1) {
+    tft.setCursor (0, STATUS_HEIGHT_BAR);
+    tft.println("");
+    tft.print("Average value from pin: ");
+    tft.println(BL.pinRead());
+    tft.print("Volts: ");
+    tft.println(BL.getBatteryVolts());
+    tft.print("Charge level: ");
+    tft.println(BL.getBatteryChargeLevel());
+    
+    if(BL.getBatteryVolts() >= MIN_USB_VOL){
+      for(int i=0; i< ARRAY_SIZE(batteryImages); i++){
+        drawingBatteryIcon(batteryImages[i]);
+        drawingText("Chrg");
+        vTaskDelay(500);
+      }
+    }else{
+        int imgNum = 0;
+        int batteryLevel = BL.getBatteryChargeLevel();
+        if(batteryLevel >=80){
+          imgNum = 3;
+        }else if(batteryLevel < 80 && batteryLevel >= 50 ){
+          imgNum = 2;
+        }else if(batteryLevel < 50 && batteryLevel >= 20 ){
+          imgNum = 1;
+        }else if(batteryLevel < 20 ){
+          imgNum = 0;
+        }  
+    
+        drawingBatteryIcon(batteryImages[imgNum]);    
+        drawingText(String(batteryLevel) + "%");
+        vTaskDelay(1000);
+    }
+      tft.print("Never Used Stack Size: ");
+      tft.println(uxTaskGetStackHighWaterMark(NULL));
+    }  
+}
+
+void drawingBatteryIcon(String filePath){
+   TJpgDec.drawFsJpg(ICON_POS_X, 0, filePath);
+}
+
+void drawingText(String text){
+  tft.fillRect(0, 0, ICON_POS_X, ICON_HEIGHT,TFT_BLACK);
+  tft.setTextDatum(5);
+  tft.drawString(text, ICON_POS_X-2, STATUS_HEIGHT_BAR/2, 4);
+}
+
+bool tft_output(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t* bitmap)
+{
+  if ( y >= tft.height() ) return 0;
+  tft.pushImage(x, y, w, h, bitmap);
+  return 1;
 }
 
 void sender(void) {
