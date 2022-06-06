@@ -232,7 +232,7 @@ void loop() {
 //    serialPrintAvailableData();
     hc12PrintDataKalmanFilter();
     serialPrintDataKalmanFilter();
-    delay(500);
+//    delay(500);
   }
 }
 
@@ -328,8 +328,10 @@ bool tft_output(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t* bitmap)
 }
 
 void sender(void) {
-  Serial.print("ch01 : ");
-  HC12.print("ch01 : ");
+  Serial.print("ch01");
+  Serial.print(",");
+  HC12.print("ch01");
+  HC12.print(",");
 }
 
 void printAvailableData(void) {
@@ -549,11 +551,10 @@ void hc12PrintDataKalmanFilter(void) {
     gyroYangle = kalAngleY;
 
   HC12.print(roll); 
-  HC12.print("\t");
+  HC12.print(",");
 
-  HC12.print(pitch); 
-  HC12.print("\t");
+  HC12.println(pitch);
 
-  HC12.print("\r\n");
+//  HC12.print("\r\n");
   delay(2);
 }
