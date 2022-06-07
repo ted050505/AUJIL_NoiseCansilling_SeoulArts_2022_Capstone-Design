@@ -21,9 +21,6 @@
 
 #define RESTRICT_PITCH 
 
-Kalman kalmanX; // 칼만 객체 생성. 
-Kalman kalmanY;
-
 // 디스플레이를 통해 전압확인과 동작을 위한 핀 선언
 #define ADC_EN              14 
 #define ADC_PIN             34
