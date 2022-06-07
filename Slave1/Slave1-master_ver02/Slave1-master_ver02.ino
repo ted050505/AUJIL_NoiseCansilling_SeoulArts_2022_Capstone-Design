@@ -4,7 +4,7 @@
 #include "src/Wire.h"
 #include "Kalman.h"
 #include "src/Pangodream_18650_CL.h"
-#include "SPIFFS.h" 
+#include "SPIFFS.h"
 #include <TFT_eSPI.h>
 #include <TJpg_Decoder.h>
 #include <SPI.h>
@@ -12,6 +12,8 @@
 #include "esp_adc_cal.h"
 //#include "bmp.h"
 #include "bmp_NoiseCancelling_LOGO.h"
+#include "I2Cdev.h"
+#include "MPU6050.h"
 
 #define rxPin 25
 #define txPin 26
@@ -57,16 +59,27 @@ Button2 btn2(BUTTON_2);
 //#define YELLOW   0xFFE0 
 //#define WHITE    0xFFFF
 
-double accX, accY, accZ;
-double gyroX, gyroY, gyroZ;
-int16_t tempRaw;
+unsigned long now, lastTime = 0;
+float dt;                                   // Differential time
 
-double gyroXangle, gyroYangle;
-double compAngleX, compAngleY; // 상보필터 적용 변수 선언
-double kalAngleX, kalAngleY; // 칼만필터 적용 변수 선언
+int16_t ax, ay, az, gx, gy, gz;             // Accelerometer gyroscope raw data
+float aax=0, aay=0,aaz=0, agx=0, agy=0, agz=0;    // Angle variable
+int roll=0, pitch=0, yaw=0;
+long axo = 0, ayo = 0, azo = 0;             // Accelerometer offset
+long gxo = 0, gyo = 0, gzo = 0;             // Gyro offset
 
-double roll;
-double pitch;
+float pi = 3.1415926;
+float AcceRatio = 16384.0;                  // Accelerometer scale factor
+float GyroRatio = 131.0;                    // Gyroscope scale factor
+
+uint8_t n_sample = 8;                       // Accelerometer filter algorithm sampling number
+float aaxs[8] = {0}, aays[8] = {0}, aazs[8] = {0};  // x,y-axis sampling queue
+long aax_sum, aay_sum,aaz_sum;                      // x,y-axis sampling add
+
+float a_x[10]={0}, a_y[10]={0},a_z[10]={0} ,g_x[10]={0} ,g_y[10]={0},g_z[10]={0}; // Accelerometer covariance calculation queue
+float Px=1, Rx, Kx, Sx, Vx, Qx;             // x-axis Calman variables
+float Py=1, Ry, Ky, Sy, Vy, Qy;             // y-axis Calman variables
+float Pz=1, Rz, Kz, Sz, Vz, Qz;             // z-axis Calman variables
 
 uint32_t timer;
 uint8_t i2cData[14]; // Buffer for I2C data
@@ -77,11 +90,9 @@ int vref = 1100;
 int btnCick = false;
 
 HardwareSerial HC12(2);
-Adafruit_MPU6050 mpu;
+MPU6050 accelgyro;
 
 sensors_event_t a, g, temp;
-void printAvailableData();
-void serialPrintAvailableData();
 
 void espDelay(int ms)
 {
@@ -192,28 +203,18 @@ void setup() {
 
   delay(100); // Wait for sensor to stabilize
 
-  /* Set kalman and gyro starting angle */
-  while (i2cRead(0x3B, i2cData, 6));
-  accX = (int16_t)((i2cData[0] << 8) | i2cData[1]);
-  accY = (int16_t)((i2cData[2] << 8) | i2cData[3]);
-  accZ = (int16_t)((i2cData[4] << 8) | i2cData[5]);
+  accelgyro.initialize();                 // initialization
 
-#ifdef RESTRICT_PITCH // Eq. 25 and 26
-  roll  = atan2(accY, accZ) * RAD_TO_DEG;
-  pitch = atan(-accX / sqrt(accY * accY + accZ * accZ)) * RAD_TO_DEG;
-#else // Eq. 28 and 29
-  roll  = atan(accY / sqrt(accX * accX + accZ * accZ)) * RAD_TO_DEG;
-  pitch = atan2(-accX, accZ) * RAD_TO_DEG;
-#endif
-
-  kalmanX.setAngle(roll); // Set starting angle
-  kalmanY.setAngle(pitch);
-  gyroXangle = roll;
-  gyroYangle = pitch;
-  compAngleX = roll;
-  compAngleY = pitch;
-
-  timer = micros();
+  unsigned short times = 200;             // The number of samples
+  for(int i=0;i<times;i++)
+  {
+        accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz); // Read the six-axis original value
+        axo += ax; ayo += ay; azo += az;      // Sampling
+        gxo += gx; gyo += gy; gzo += gz;
+  }
+    
+    axo /= times; ayo /= times; azo /= times; // Calculate accelerometer offset
+    gxo /= times; gyo /= times; gzo /= times; // Calculate the gyro offset
 }
  
 void loop() {
@@ -228,11 +229,9 @@ void loop() {
   }else{
     mpu.enableSleep(false);
     sender();
-//    printAvailableData();
-//    serialPrintAvailableData();
-    hc12PrintDataKalmanFilter();
-    serialPrintDataKalmanFilter();
-//    delay(500);
+    serialPrintDataKalman_RollPitchYaw();
+    hc12DataKalman_RollPitchYaw();
+    delay(10);
   }
 }
 
@@ -334,227 +333,222 @@ void sender(void) {
   HC12.print(",");
 }
 
-void printAvailableData(void) {
-  mpu.getEvent(&a, &g, &temp);
+void serialPrintDataKalman_RollPitchYaw() {
+  unsigned long now = millis();             // current time(ms)
+    dt = (now - lastTime) / 1000.0;           // Differential time(s)
+    lastTime = now;                           // Last sampling time(ms)
 
-  HC12.print("Acc: ");
-  HC12.print(a.acceleration.x);
-  HC12.print(", ");
-  HC12.print(a.acceleration.y);
-  HC12.print(", ");
-  HC12.print(a.acceleration.z);
-  HC12.println(" m/s^2");
+    accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz); // Read the six-axis original value
 
-  HC12.print("Rot: ");
-  HC12.print(g.gyro.x);
-  HC12.print(", ");
-  HC12.print(g.gyro.y);
-  HC12.print(", ");
-  HC12.print(g.gyro.z);
-  HC12.println(" rad/s");
+    float accx = ax / AcceRatio;              // x-axis acceleration
+    float accy = ay / AcceRatio;              // y-axis acceleration
+    float accz = az / AcceRatio;              // z-axis acceleration
 
-  HC12.print("");
+    aax = atan(accy / accz) * (-180) / pi;    // The x-axis angle to the z-axis
+    aay = atan(accx / accz) * 180 / pi;       // The y-axis angle to the z-axis
+    aaz = atan(accz / accy) * 180 / pi;       // The z-axis angle to the y-axis
+
+    aax_sum = 0;                              // Sliding weight filtering algorithm for accelerometer raw data
+    aay_sum = 0;
+    aaz_sum = 0;
+  
+    for(int i=1;i<n_sample;i++)
+    {
+        aaxs[i-1] = aaxs[i];
+        aax_sum += aaxs[i] * i;
+        aays[i-1] = aays[i];
+        aay_sum += aays[i] * i;
+        aazs[i-1] = aazs[i];
+        aaz_sum += aazs[i] * i;
+    
+    }
+    
+    aaxs[n_sample-1] = aax;
+    aax_sum += aax * n_sample;
+    aax = (aax_sum / (11*n_sample/2.0)) * 9 / 7.0; // Angle AM ​​to 0-90 °
+    aays[n_sample-1] = aay;                        // Here we use the experimental method to obtain the appropriate coefficient
+    aay_sum += aay * n_sample;                     // This example factor is 9/7
+    aay = (aay_sum / (11*n_sample/2.0)) * 9 / 7.0;
+    aazs[n_sample-1] = aaz; 
+    aaz_sum += aaz * n_sample;
+    aaz = (aaz_sum / (11*n_sample/2.0)) * 9 / 7.0;
+
+    float gyrox = - (gx-gxo) / GyroRatio * dt; // x-axis angular velocity
+    float gyroy = - (gy-gyo) / GyroRatio * dt; // x-axis angular velocity
+    float gyroz = - (gz-gzo) / GyroRatio * dt; // x-axis angular velocity
+    agx += gyrox;                             // x-axis angular velocity integral
+    agy += gyroy;                             // y-axis angular velocity integral
+    agz += gyroz;                             // z-axis angular velocity integral
+    
+    /* kalman start */
+    Sx = 0; Rx = 0;
+    Sy = 0; Ry = 0;
+    Sz = 0; Rz = 0;
+    
+    for(int i=1;i<10;i++)
+    {                 //The average value of the calculation
+        a_x[i-1] = a_x[i];                      // The acceleration average
+        Sx += a_x[i];
+        a_y[i-1] = a_y[i];
+        Sy += a_y[i];
+        a_z[i-1] = a_z[i];
+        Sz += a_z[i];
+    
+    }
+    
+    a_x[9] = aax;
+    Sx += aax;
+    Sx /= 10;                                 // x-axis acceleration average
+    a_y[9] = aay;
+    Sy += aay;
+    Sy /= 10;                                 // y-axis acceleration average
+    a_z[9] = aaz;
+    Sz += aaz;
+    Sz /= 10;                                 // z-axis acceleration average
+
+    for(int i=0;i<10;i++)
+    {
+        Rx += sq(a_x[i] - Sx);
+        Ry += sq(a_y[i] - Sy);
+        Rz += sq(a_z[i] - Sz);
+    
+    }
+    
+    Rx = Rx / 9;                              // Get the variance
+    Ry = Ry / 9;                        
+    Rz = Rz / 9;
+  
+    Px = Px + 0.0025;                         // 0.0025 in the following instructions ...
+    Kx = Px / (Px + Rx);                      // Calculate the Kalman gain
+    agx = agx + Kx * (aax - agx);             // Gyro angle and accelerometer speed superimposed
+    Px = (1 - Kx) * Px;                       // Update p value
+
+    Py = Py + 0.0025;
+    Ky = Py / (Py + Ry);
+    agy = agy + Ky * (aay - agy); 
+    Py = (1 - Ky) * Py;
+  
+    Pz = Pz + 0.0025;
+    Kz = Pz / (Pz + Rz);
+    agz = agz + Kz * (aaz - agz); 
+    Pz = (1 - Kz) * Pz;
+
+    /* kalman end */
+   roll = round(agx);
+   pitch = round(agy);
+   yaw = round(agz);
+
+   Serial.print(roll);Serial.print(",");
+   Serial.print(pitch);Serial.print(",");
+   Serial.print(yaw);Serial.println();
 }
 
-void serialPrintAvailableData(void) {
-  mpu.getEvent(&a, &g, &temp);
+void hc12DataKalman_RollPitchYaw() {
+  unsigned long now = millis();             // current time(ms)
+    dt = (now - lastTime) / 1000.0;           // Differential time(s)
+    lastTime = now;                           // Last sampling time(ms)
 
-  Serial.print("Acc: ");
-  Serial.print(a.acceleration.x);
-  Serial.print(", ");
-  Serial.print(a.acceleration.y);
-  Serial.print(", ");
-  Serial.print(a.acceleration.z);
-  Serial.println(" m/s^2");
+    accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz); // Read the six-axis original value
 
-  Serial.print("Rot: ");
-  Serial.print(g.gyro.x);
-  Serial.print(", ");
-  Serial.print(g.gyro.y);
-  Serial.print(", ");
-  Serial.print(g.gyro.z);
-  Serial.println(" rad/s");
+    float accx = ax / AcceRatio;              // x-axis acceleration
+    float accy = ay / AcceRatio;              // y-axis acceleration
+    float accz = az / AcceRatio;              // z-axis acceleration
 
-  Serial.print("");
-}
+    aax = atan(accy / accz) * (-180) / pi;    // The x-axis angle to the z-axis
+    aay = atan(accx / accz) * 180 / pi;       // The y-axis angle to the z-axis
+    aaz = atan(accz / accy) * 180 / pi;       // The z-axis angle to the y-axis
 
-void serialPrintDataKalmanFilter(void) {
-/* Update all the values */
-  while (i2cRead(0x3B, i2cData, 14));
-  accX = (int16_t)((i2cData[0] << 8) | i2cData[1]);
-  accY = (int16_t)((i2cData[2] << 8) | i2cData[3]);
-  accZ = (int16_t)((i2cData[4] << 8) | i2cData[5]);
-  tempRaw = (int16_t)((i2cData[6] << 8) | i2cData[7]);
-  gyroX = (int16_t)((i2cData[8] << 8) | i2cData[9]);
-  gyroY = (int16_t)((i2cData[10] << 8) | i2cData[11]);
-  gyroZ = (int16_t)((i2cData[12] << 8) | i2cData[13]);;
+    aax_sum = 0;                              // Sliding weight filtering algorithm for accelerometer raw data
+    aay_sum = 0;
+    aaz_sum = 0;
+  
+    for(int i=1;i<n_sample;i++)
+    {
+        aaxs[i-1] = aaxs[i];
+        aax_sum += aaxs[i] * i;
+        aays[i-1] = aays[i];
+        aay_sum += aays[i] * i;
+        aazs[i-1] = aazs[i];
+        aaz_sum += aazs[i] * i;
+    
+    }
+    
+    aaxs[n_sample-1] = aax;
+    aax_sum += aax * n_sample;
+    aax = (aax_sum / (11*n_sample/2.0)) * 9 / 7.0; // Angle AM ​​to 0-90 °
+    aays[n_sample-1] = aay;                        // Here we use the experimental method to obtain the appropriate coefficient
+    aay_sum += aay * n_sample;                     // This example factor is 9/7
+    aay = (aay_sum / (11*n_sample/2.0)) * 9 / 7.0;
+    aazs[n_sample-1] = aaz; 
+    aaz_sum += aaz * n_sample;
+    aaz = (aaz_sum / (11*n_sample/2.0)) * 9 / 7.0;
 
-  double dt = (double)(micros() - timer) / 1000000; // Calculate delta time
-  timer = micros();
+    float gyrox = - (gx-gxo) / GyroRatio * dt; // x-axis angular velocity
+    float gyroy = - (gy-gyo) / GyroRatio * dt; // x-axis angular velocity
+    float gyroz = - (gz-gzo) / GyroRatio * dt; // x-axis angular velocity
+    agx += gyrox;                             // x-axis angular velocity integral
+    agy += gyroy;                             // y-axis angular velocity integral
+    agz += gyroz;                             // z-axis angular velocity integral
+    
+    /* kalman start */
+    Sx = 0; Rx = 0;
+    Sy = 0; Ry = 0;
+    Sz = 0; Rz = 0;
+    
+    for(int i=1;i<10;i++)
+    {                 //The average value of the calculation
+        a_x[i-1] = a_x[i];                      // The acceleration average
+        Sx += a_x[i];
+        a_y[i-1] = a_y[i];
+        Sy += a_y[i];
+        a_z[i-1] = a_z[i];
+        Sz += a_z[i];
+    
+    }
+    
+    a_x[9] = aax;
+    Sx += aax;
+    Sx /= 10;                                 // x-axis acceleration average
+    a_y[9] = aay;
+    Sy += aay;
+    Sy /= 10;                                 // y-axis acceleration average
+    a_z[9] = aaz;
+    Sz += aaz;
+    Sz /= 10;                                 // z-axis acceleration average
 
-#ifdef RESTRICT_PITCH // Eq. 25 and 26
-  roll  = atan2(accY, accZ) * RAD_TO_DEG;
-  pitch = atan(-accX / sqrt(accY * accY + accZ * accZ)) * RAD_TO_DEG;
-#else // Eq. 28 and 29
-  roll  = atan(accY / sqrt(accX * accX + accZ * accZ)) * RAD_TO_DEG;
-  pitch = atan2(-accX, accZ) * RAD_TO_DEG;
-#endif
+    for(int i=0;i<10;i++)
+    {
+        Rx += sq(a_x[i] - Sx);
+        Ry += sq(a_y[i] - Sy);
+        Rz += sq(a_z[i] - Sz);
+    
+    }
+    
+    Rx = Rx / 9;                              // Get the variance
+    Ry = Ry / 9;                        
+    Rz = Rz / 9;
+  
+    Px = Px + 0.0025;                         // 0.0025 in the following instructions ...
+    Kx = Px / (Px + Rx);                      // Calculate the Kalman gain
+    agx = agx + Kx * (aax - agx);             // Gyro angle and accelerometer speed superimposed
+    Px = (1 - Kx) * Px;                       // Update p value
 
-  double gyroXrate = gyroX / 131.0; // Convert to deg/s
-  double gyroYrate = gyroY / 131.0; // Convert to deg/s
+    Py = Py + 0.0025;
+    Ky = Py / (Py + Ry);
+    agy = agy + Ky * (aay - agy); 
+    Py = (1 - Ky) * Py;
+  
+    Pz = Pz + 0.0025;
+    Kz = Pz / (Pz + Rz);
+    agz = agz + Kz * (aaz - agz); 
+    Pz = (1 - Kz) * Pz;
 
-#ifdef RESTRICT_PITCH
-  // This fixes the transition problem when the accelerometer angle jumps between -180 and 180 degrees
-  if ((roll < -90 && kalAngleX > 90) || (roll > 90 && kalAngleX < -90)) {
-    kalmanX.setAngle(roll);
-    compAngleX = roll;
-    kalAngleX = roll;
-    gyroXangle = roll;
-  } else
-    kalAngleX = kalmanX.getAngle(roll, gyroXrate, dt); // Calculate the angle using a Kalman filter
+    /* kalman end */
+   roll = round(agx);
+   pitch = round(agy);
+   yaw = round(agz);
 
-  if (abs(kalAngleX) > 90)
-    gyroYrate = -gyroYrate; // Invert rate, so it fits the restriced accelerometer reading
-  kalAngleY = kalmanY.getAngle(pitch, gyroYrate, dt);
-#else
-  // This fixes the transition problem when the accelerometer angle jumps between -180 and 180 degrees
-  if ((pitch < -90 && kalAngleY > 90) || (pitch > 90 && kalAngleY < -90)) {
-    kalmanY.setAngle(pitch);
-    compAngleY = pitch;
-    kalAngleY = pitch;
-    gyroYangle = pitch;
-  } else
-    kalAngleY = kalmanY.getAngle(pitch, gyroYrate, dt); // Calculate the angle using a Kalman filter
-
-  if (abs(kalAngleY) > 90)
-    gyroXrate = -gyroXrate; // Invert rate, so it fits the restriced accelerometer reading
-  kalAngleX = kalmanX.getAngle(roll, gyroXrate, dt); // Calculate the angle using a Kalman filter
-#endif
-
-  gyroXangle += gyroXrate * dt; // Calculate gyro angle without any filter
-  gyroYangle += gyroYrate * dt;
-  //gyroXangle += kalmanX.getRate() * dt; // Calculate gyro angle using the unbiased rate
-  //gyroYangle += kalmanY.getRate() * dt;
-
-  compAngleX = 0.93 * (compAngleX + gyroXrate * dt) + 0.07 * roll; // Calculate the angle using a Complimentary filter
-  compAngleY = 0.93 * (compAngleY + gyroYrate * dt) + 0.07 * pitch;
-
-  // Reset the gyro angle when it has drifted too much
-  if (gyroXangle < -180 || gyroXangle > 180)
-    gyroXangle = kalAngleX;
-  if (gyroYangle < -180 || gyroYangle > 180)
-    gyroYangle = kalAngleY;
-
-  /* Print Data */
-#if 0 // Set to 1 to activate
-  Serial.print(accX); Serial.print("\t");
-  Serial.print(accY); Serial.print("\t");
-  Serial.print(accZ); Serial.print("\t");
-
-  Serial.print(gyroX); Serial.print("\t");
-  Serial.print(gyroY); Serial.print("\t");
-  Serial.print(gyroZ); Serial.print("\t");
-
-  Serial.print("\t");
-#endif
-
-  Serial.print(roll); 
-  Serial.print("\t");
-//  Serial.print(gyroXangle); Serial.print("\t");
-//  Serial.print(compAngleX); Serial.print("\t");
-//  Serial.print(kalAngleX); Serial.print("\t");
-
-//  Serial.print("\t");
-
-  Serial.print(pitch); 
-  Serial.print("\t");
-//  Serial.print(gyroYangle); Serial.print("\t");
-//  Serial.print(compAngleY); Serial.print("\t");
-//  Serial.print(kalAngleY); Serial.print("\t");
-
-#if 0 // Set to 1 to print the temperature
-  Serial.print("\t");
-
-  double temperature = (double)tempRaw / 340.0 + 36.53;
-  Serial.print(temperature); Serial.print("\t");
-#endif
-
-  Serial.print("\r\n");
-  delay(2);
-}
-
-void hc12PrintDataKalmanFilter(void) {
-/* Update all the values */
-  while (i2cRead(0x3B, i2cData, 14));
-  accX = (int16_t)((i2cData[0] << 8) | i2cData[1]);
-  accY = (int16_t)((i2cData[2] << 8) | i2cData[3]);
-  accZ = (int16_t)((i2cData[4] << 8) | i2cData[5]);
-  tempRaw = (int16_t)((i2cData[6] << 8) | i2cData[7]);
-  gyroX = (int16_t)((i2cData[8] << 8) | i2cData[9]);
-  gyroY = (int16_t)((i2cData[10] << 8) | i2cData[11]);
-  gyroZ = (int16_t)((i2cData[12] << 8) | i2cData[13]);;
-
-  double dt = (double)(micros() - timer) / 1000000; // Calculate delta time
-  timer = micros();
-
-#ifdef RESTRICT_PITCH // Eq. 25 and 26
-  roll  = atan2(accY, accZ) * RAD_TO_DEG;
-  pitch = atan(-accX / sqrt(accY * accY + accZ * accZ)) * RAD_TO_DEG;
-#else // Eq. 28 and 29
-  roll  = atan(accY / sqrt(accX * accX + accZ * accZ)) * RAD_TO_DEG;
-  pitch = atan2(-accX, accZ) * RAD_TO_DEG;
-#endif
-
-  double gyroXrate = gyroX / 131.0; // Convert to deg/s
-  double gyroYrate = gyroY / 131.0; // Convert to deg/s
-
-#ifdef RESTRICT_PITCH
-  // This fixes the transition problem when the accelerometer angle jumps between -180 and 180 degrees
-  if ((roll < -90 && kalAngleX > 90) || (roll > 90 && kalAngleX < -90)) {
-    kalmanX.setAngle(roll);
-    compAngleX = roll;
-    kalAngleX = roll;
-    gyroXangle = roll;
-  } else
-    kalAngleX = kalmanX.getAngle(roll, gyroXrate, dt); // Calculate the angle using a Kalman filter
-
-  if (abs(kalAngleX) > 90)
-    gyroYrate = -gyroYrate; // Invert rate, so it fits the restriced accelerometer reading
-  kalAngleY = kalmanY.getAngle(pitch, gyroYrate, dt);
-#else
-  // This fixes the transition problem when the accelerometer angle jumps between -180 and 180 degrees
-  if ((pitch < -90 && kalAngleY > 90) || (pitch > 90 && kalAngleY < -90)) {
-    kalmanY.setAngle(pitch);
-    compAngleY = pitch;
-    kalAngleY = pitch;
-    gyroYangle = pitch;
-  } else
-    kalAngleY = kalmanY.getAngle(pitch, gyroYrate, dt); // Calculate the angle using a Kalman filter
-
-  if (abs(kalAngleY) > 90)
-    gyroXrate = -gyroXrate; // Invert rate, so it fits the restriced accelerometer reading
-  kalAngleX = kalmanX.getAngle(roll, gyroXrate, dt); // Calculate the angle using a Kalman filter
-#endif
-
-  gyroXangle += gyroXrate * dt; // Calculate gyro angle without any filter
-  gyroYangle += gyroYrate * dt;
-  //gyroXangle += kalmanX.getRate() * dt; // Calculate gyro angle using the unbiased rate
-  //gyroYangle += kalmanY.getRate() * dt;
-
-  compAngleX = 0.93 * (compAngleX + gyroXrate * dt) + 0.07 * roll; // Calculate the angle using a Complimentary filter
-  compAngleY = 0.93 * (compAngleY + gyroYrate * dt) + 0.07 * pitch;
-
-  // Reset the gyro angle when it has drifted too much
-  if (gyroXangle < -180 || gyroXangle > 180)
-    gyroXangle = kalAngleX;
-  if (gyroYangle < -180 || gyroYangle > 180)
-    gyroYangle = kalAngleY;
-
-  HC12.print(roll); 
-  HC12.print(",");
-
-  HC12.println(pitch);
-
-//  HC12.print("\r\n");
-  delay(2);
+   HC12.print(roll);HC12.print(",");
+   HC12.print(pitch);HC12.print(",");
+   HC12.print(yaw);HC12.println();
 }
