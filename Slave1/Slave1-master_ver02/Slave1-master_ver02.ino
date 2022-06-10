@@ -12,7 +12,7 @@
 #include "esp_adc_cal.h"
 //#include "bmp.h"
 #include "bmp_NoiseCancelling_LOGO.h"
-#include "I2Cdev.h"
+//#include "I2Cdev.h"
 #include "MPU6050.h"
 
 #define rxPin 25
@@ -222,9 +222,9 @@ void loop() {
     button_loop();
     
   if(digitalRead(SWITCH1) == HIGH) { 
-    mpu.enableSleep(true);
+//    mpu.enableSleep(true);
   }else{
-    mpu.enableSleep(false);
+//    mpu.enableSleep(false);
     sender();
     serialPrintDataKalman_RollPitchYaw();
     hc12DataKalman_RollPitchYaw();
