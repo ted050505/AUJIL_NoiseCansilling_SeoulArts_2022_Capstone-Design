@@ -12,7 +12,7 @@
 #include "esp_adc_cal.h"
 //#include "bmp.h"
 #include "bmp_NoiseCancelling_LOGO.h"
-//#include "I2Cdev.h"
+#include "I2Cdev.h"
 #include "MPU6050.h"
 
 #define rxPin 25
@@ -194,7 +194,7 @@ void setup() {
 
   while (i2cRead(0x75, i2cData, 1));
   if (i2cData[0] != 0x68) { // Read "WHO_AM_I" register
-//    Serial.print(F("Error reading sensor"));
+    Serial.print(F("Error reading sensor"));
     while (1);
   }
 

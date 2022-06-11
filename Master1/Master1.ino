@@ -1,6 +1,6 @@
 #include <SoftwareSerial.h>
  
-SoftwareSerial HC12(2,3); // HC-12 TX Pin은 D2(RX용)에, HC-12 RX Pin을 D3(TX용)
+SoftwareSerial HC12(3,1); // HC-12 TX Pin은 D2(RX용)에, HC-12 RX Pin을 D3(TX용)
 
 void setup() {
   Serial.begin(9600);             // 시리얼 모니터 속도 정의
