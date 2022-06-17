@@ -31,8 +31,3 @@ void loop() {
 //    Serial.println("SWITCH ON"); 
 //  }
 }
-
-void sender(void) {
-//  Serial.print("ch01 : ");
-  HC12.print("ch03 : ");
-}

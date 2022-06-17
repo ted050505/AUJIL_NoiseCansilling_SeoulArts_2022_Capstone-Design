@@ -556,5 +556,5 @@ void hc12PrintDataKalmanFilter(void) {
   HC12.println(pitch);
 
 //  HC12.print("\r\n");
-  delay(2);
+  delay(10);
 }
