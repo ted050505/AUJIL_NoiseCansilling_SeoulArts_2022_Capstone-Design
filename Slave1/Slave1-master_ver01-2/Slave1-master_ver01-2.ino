@@ -161,7 +161,7 @@ void setup() {
   pinMode(SWITCH1, INPUT_PULLUP);
   Serial.begin(baud); 
   HC12.begin(baud, SERIAL_8N1, rxPin, txPin);             // 시리얼 모니터 속도 정의
-
+  
 //  pinMode(ADC_EN, OUTPUT);
 //  digitalWrite(ADC_EN, HIGH);
 
@@ -325,9 +325,9 @@ bool tft_output(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t* bitmap)
 }
 
 void sender(void) {
-  Serial.print("1");
+  Serial.print("3");
   Serial.print(",");
-  HC12.print("1");
+  HC12.print("3");
   HC12.print(",");
 }
 
@@ -412,28 +412,12 @@ void serialPrintDataKalmanFilter(void) {
 #endif
 
   Serial.print(roll); 
-  Serial.print("\t");
-//  Serial.print(gyroXangle); Serial.print("\t");
-//  Serial.print(compAngleX); Serial.print("\t");
-//  Serial.print(kalAngleX); Serial.print("\t");
-
-//  Serial.print("\t");
-
+  Serial.print(",");
   Serial.print(pitch); 
-  Serial.print("\t");
-//  Serial.print(gyroYangle); Serial.print("\t");
-//  Serial.print(compAngleY); Serial.print("\t");
-//  Serial.print(kalAngleY); Serial.print("\t");
-
-#if 0 // Set to 1 to print the temperature
-  Serial.print("\t");
-
-  double temperature = (double)tempRaw / 340.0 + 36.53;
-  Serial.print(temperature); Serial.print("\t");
-#endif
+  Serial.print(",");
 
   Serial.print("\r\n");
-  delay(2);
+  delay(10);
 }
 
 void hc12PrintDataKalmanFilter(void) {
@@ -509,5 +493,5 @@ void hc12PrintDataKalmanFilter(void) {
   HC12.println(pitch);
 
 //  HC12.print("\r\n");
-  delay(10);
+  delay(70);
 }
