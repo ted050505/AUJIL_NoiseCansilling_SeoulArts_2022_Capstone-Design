@@ -325,9 +325,9 @@ bool tft_output(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t* bitmap)
 }
 
 void sender(void) {
-  Serial.print("3");
+  Serial.print("2");
   Serial.print(",");
-  HC12.print("3");
+  HC12.print("2");
   HC12.print(",");
 }
 
@@ -493,5 +493,5 @@ void hc12PrintDataKalmanFilter(void) {
   HC12.println(pitch);
 
 //  HC12.print("\r\n");
-  delay(70);
+  delay(20);
 }
