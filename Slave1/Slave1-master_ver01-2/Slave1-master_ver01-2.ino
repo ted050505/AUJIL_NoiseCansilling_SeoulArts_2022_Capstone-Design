@@ -270,6 +270,7 @@ void battery_info(void *arg)
     tft.println("");
 //    tft.print("Average value from pin: ");
 //    tft.println(BL.pinRead());
+    tft.println("Headphone Number : 1");
     tft.print("Volts: ");
     tft.println(BL.getBatteryVolts());
     tft.print("Charge level: ");
@@ -325,9 +326,9 @@ bool tft_output(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t* bitmap)
 }
 
 void sender(void) {
-  Serial.print("2");
+  Serial.print("1");
   Serial.print(",");
-  HC12.print("2");
+  HC12.print("1");
   HC12.print(",");
 }
 
@@ -413,11 +414,9 @@ void serialPrintDataKalmanFilter(void) {
 
   Serial.print(roll); 
   Serial.print(",");
-  Serial.print(pitch); 
-  Serial.print(",");
-
-  Serial.print("\r\n");
-  delay(10);
+  Serial.println(pitch); 
+  
+  delay(30);
 }
 
 void hc12PrintDataKalmanFilter(void) {
@@ -493,5 +492,5 @@ void hc12PrintDataKalmanFilter(void) {
   HC12.println(pitch);
 
 //  HC12.print("\r\n");
-  delay(20);
+  delay(30);
 }
