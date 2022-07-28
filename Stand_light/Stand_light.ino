@@ -77,29 +77,3 @@ void loop() {
     }
   }
 }
-
-
-//if (currentMillis - previousMillis > interval) {
-//  previousMillis = currentMillis;
-//
-//  if (c == '1') {
-//    pixels.clear();
-//    for (int u = 0; u < 255; u++) {
-//      for (int i = 0; i < 3; i++) {
-//        pixels.setBrightness(u);
-//        pixels.setPixelColor(i, pixels.Color(255, 130, 30));
-//        pixels.show();   // Send the updated pixel colors to the hardware.
-//      }
-//    }
-//  }
-//  if (c == '2') {
-//    pixels.clear();
-//    for (int u = 0; u < 255; u++) {
-//      for (int i = 0; i < 3; i++) {
-//        pixels.setBrightness(u);
-//        pixels.setPixelColor(i, pixels.Color(50, 255, 50));
-//        pixels.show();   // Send the updated pixel colors to the hardware.
-//      }
-//    }
-//  }
-//}
