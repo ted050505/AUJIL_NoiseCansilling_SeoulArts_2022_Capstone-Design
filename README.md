@@ -4,7 +4,7 @@
 <p align="center"><img id="img01" src="https://user-images.githubusercontent.com/83487028/187818910-06db9ec6-8bce-4bfb-887f-6429602ce8b9.jpeg" width="700px" height="370px" title="50px" alt="ReferenceImage"></img></p>
 <br>
 
-<center>Gen : Interactive Installtion</center>
+<div style="text-align=center">Gen : Interactive Installtion</div>
 
 
 ***
