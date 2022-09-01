@@ -1,4 +1,4 @@
-# Aujil_NoiseCansilling_Project
+# AUJIL_NoiseCansilling_Project
 
 <br>
 <p align="center"><img id="img01" src="https://user-images.githubusercontent.com/83487028/187818910-06db9ec6-8bce-4bfb-887f-6429602ce8b9.jpeg" width="700px" height="370px" title="50px" alt="ReferenceImage"></img></p>
@@ -7,6 +7,7 @@
 ### Gen : Interactive Installtion
 
 
+***
 # 하드웨어 개발
  + 헤드폰
    + 노이즈 캔슬링을 체험 할 수 있는 헤드폰으로, 인터렉션 요소가 된다.
