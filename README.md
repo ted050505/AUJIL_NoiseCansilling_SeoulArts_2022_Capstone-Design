@@ -1,6 +1,6 @@
 # Aujil_NoiseCansilling_Project
 
-<img src="https://user-images.githubusercontent.com/83487028/187818910-06db9ec6-8bce-4bfb-887f-6429602ce8b9.jpeg" width="700px" height="600px" title="100px" alt=""></img>
+<img src="https://user-images.githubusercontent.com/83487028/187818910-06db9ec6-8bce-4bfb-887f-6429602ce8b9.jpeg" width="1280px" height="720ox" title="50px" alt=""></img>
 <br>
 Gen : Interactive Installtion
 
