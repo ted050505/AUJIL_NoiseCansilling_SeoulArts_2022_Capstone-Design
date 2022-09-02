@@ -1,4 +1,4 @@
-# AUJIL_NoiseCansilling_Project
+# AUJIL_NoiseCansilling_노이즈캔슬링
 
 ## 프로젝트 소개
 
@@ -6,7 +6,8 @@
 <p align="center"><img id="img01" src="https://user-images.githubusercontent.com/83487028/187818910-06db9ec6-8bce-4bfb-887f-6429602ce8b9.jpeg" width="700px" height="370px" title="50px" alt="ReferenceImage"></img></p>
 <br>
 
-<div style="text-align=center">Genre : Interactive Installtion</div>
+<!-- <div style="text-align=center">Genre : Interactive Installtion</div> -->
+<div style="text-align=center">기술의 이면과 그 위험성을 알면서도 그저 외면하고 살아가는 현상을 표현한 인터렉티브 인스톨레이션 작품</div>
 
 
 ***
